@@ -783,7 +783,7 @@ ifdef CONFIG_CC_STACKPROTECTOR_REGULAR
   stackp-flag := -fstack-protector
   stackp-name := REGULAR
 else
-ifdef CONFIG_CC_STACKPROTECTOR_NONE
+ifdef CONFIG_CC_STACKPROTECTOR_STRONG
   stackp-flag := -fstack-protector-strong
   stackp-name := STRONG
 else
