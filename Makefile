@@ -2,8 +2,7 @@
 VERSION = 4
 PATCHLEVEL = 14
 SUBLEVEL = 356
-EXTRAVERSION = -openela-rc1
-NAME = Petit Gorille
+NAME = beyond1lte-los
 
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"
