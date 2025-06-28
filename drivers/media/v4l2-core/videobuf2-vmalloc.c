@@ -36,10 +36,14 @@ static void vb2_vmalloc_put(void *buf_priv);
 
 static void *vb2_vmalloc_alloc(struct device *dev, unsigned long attrs,
 			       unsigned long size, enum dma_data_direction dma_dir,
-			       gfp_t gfp_flags)
+			       gfp_t gfp_flags, int dma_attrs)
 {
+
 	struct vb2_vmalloc_buf *buf;
 
+	// Prevent compiler warnings if unused
+	(void)dma_attrs;
+	
 	buf = kzalloc(sizeof(*buf), GFP_KERNEL | gfp_flags);
 	if (!buf)
 		return ERR_PTR(-ENOMEM);
@@ -73,12 +77,16 @@ static void vb2_vmalloc_put(void *buf_priv)
 
 static void *vb2_vmalloc_get_userptr(struct device *dev, unsigned long vaddr,
 				     unsigned long size,
-				     enum dma_data_direction dma_dir)
+				     enum dma_data_direction dma_dir,
+				     int dma_attrs)
 {
+
 	struct vb2_vmalloc_buf *buf;
 	struct frame_vector *vec;
 	int n_pages, offset, i;
 	int ret = -ENOMEM;
+	
+	(void)dma_attrs; // Silence unused parameter warning
 
 	buf = kzalloc(sizeof(*buf), GFP_KERNEL);
 	if (!buf)
@@ -87,6 +95,7 @@ static void *vb2_vmalloc_get_userptr(struct device *dev, unsigned long vaddr,
 	buf->dma_dir = dma_dir;
 	offset = vaddr & ~PAGE_MASK;
 	buf->size = size;
+
 	vec = vb2_create_framevec(vaddr, size, dma_dir == DMA_FROM_DEVICE ||
 					       dma_dir == DMA_BIDIRECTIONAL);
 	if (IS_ERR(vec)) {
@@ -94,17 +103,18 @@ static void *vb2_vmalloc_get_userptr(struct device *dev, unsigned long vaddr,
 		goto fail_pfnvec_create;
 	}
 	buf->vec = vec;
+
 	n_pages = frame_vector_count(vec);
+
 	if (frame_vector_to_pages(vec) < 0) {
 		unsigned long *nums = frame_vector_pfns(vec);
 
-		/*
-		 * We cannot get page pointers for these pfns. Check memory is
-		 * physically contiguous and use direct mapping.
-		 */
-		for (i = 1; i < n_pages; i++)
-			if (nums[i-1] + 1 != nums[i])
+		// Check physical contiguity
+		for (i = 1; i < n_pages; i++) {
+			if (nums[i - 1] + 1 != nums[i])
 				goto fail_map;
+		}
+
 		buf->vaddr = (__force void *)
 			ioremap_nocache(__pfn_to_phys(nums[0]), size + offset);
 	} else {
@@ -114,6 +124,7 @@ static void *vb2_vmalloc_get_userptr(struct device *dev, unsigned long vaddr,
 
 	if (!buf->vaddr)
 		goto fail_map;
+
 	buf->vaddr += offset;
 	return buf;
 
@@ -121,9 +132,9 @@ fail_map:
 	vb2_destroy_framevec(vec);
 fail_pfnvec_create:
 	kfree(buf);
-
 	return ERR_PTR(ret);
 }
+
 
 static void vb2_vmalloc_put_userptr(void *buf_priv)
 {
@@ -382,22 +393,29 @@ static struct dma_buf *vb2_vmalloc_get_dmabuf(void *buf_priv, unsigned long flag
 /*       callbacks for DMABUF buffers        */
 /*********************************************/
 
-static int vb2_vmalloc_map_dmabuf(void *mem_priv)
+static int vb2_vmalloc_map_dmabuf(void *mem_priv, size_t size, int direction)
 {
 	struct vb2_vmalloc_buf *buf = mem_priv;
+	
+	(void)size;
+	(void)direction;
 
 	buf->vaddr = dma_buf_vmap(buf->dbuf);
 
 	return buf->vaddr ? 0 : -EFAULT;
 }
 
-static void vb2_vmalloc_unmap_dmabuf(void *mem_priv)
+
+static void vb2_vmalloc_unmap_dmabuf(void *mem_priv, size_t size)
 {
 	struct vb2_vmalloc_buf *buf = mem_priv;
+	
+	(void)size;
 
 	dma_buf_vunmap(buf->dbuf, buf->vaddr);
 	buf->vaddr = NULL;
 }
+
 
 static void vb2_vmalloc_detach_dmabuf(void *mem_priv)
 {
