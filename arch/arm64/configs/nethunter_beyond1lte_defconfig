@@ -6989,5 +6989,7 @@ CONFIG_CAN_RAW=m
 CONFIG_CAN_BCM=m
 CONFIG_CAN_GW=m
 CONFIG_CAN_SLCAN=m
-
+# Disable broken camera drivers to bypass build error
+CONFIG_VIDEO_SAMSUNG_FIMC_IS=n
+CONFIG_VIDEO_EXYNOS_FIMC_IS=n
 
