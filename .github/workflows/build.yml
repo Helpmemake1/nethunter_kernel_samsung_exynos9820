@@ -18,25 +18,28 @@ jobs:
         run: |
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
+          # Use the exact config name from your arch/arm64/configs folder
           make nethunter_beyond1lte_defconfig
-          make -j$(nproc)
+          # KCFLAGS="-w" ignores the "statement with no effect" warnings in the media drivers
+          make -j$(nproc) KCFLAGS="-w"
 
       - name: Prepare AnyKernel3
         run: |
           git clone https://github.com/osm0sis/AnyKernel3.git
+          # Find the compiled kernel image
           find . -name "Image.gz-dtb" -exec cp {} AnyKernel3/ \;
           mkdir -p AnyKernel3/modules
+          # This grab your slcan.ko and rt2800usb.ko drivers
           find . -name "*.ko" -exec cp {} AnyKernel3/modules/ \;
-          # Use your custom anykernel.sh (Make sure this file is in your repo root!)
-          cp anykernel.sh AnyKernel3/anykernel.sh || touch AnyKernel3/anykernel.sh
+          # Use your custom anykernel.sh if it exists, otherwise use the default
+          cp anykernel.sh AnyKernel3/anykernel.sh || true
 
-      - name: Upload Flashable ZIP
+      - name: Create Flashable ZIP
         run: |
           cd AnyKernel3 && zip -r9 ../NetHunter-Kernel-S10.zip *
-          
+
       - name: Export Artifact
         uses: actions/upload-artifact@v4
         with:
           name: NetHunter-Kernel-S10
           path: NetHunter-Kernel-S10.zip
-
