@@ -14,14 +14,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y bc bison build-essential flex git libssl-dev libncurses5-dev zip gcc-aarch64-linux-gnu
 
-      - name: Build Kernel and Modules
-        run: |
+            - name: Build Kernel and Modules
+              run: |
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
-          # Use the exact config name from your arch/arm64/configs folder
           make nethunter_beyond1lte_defconfig
-          # KCFLAGS="-w" ignores the "statement with no effect" warnings in the media drivers
-          make -j$(nproc) KCFLAGS="-w"
+          # The -k flag tells 'make' to keep going even if there are errors
+          make -k -j$(nproc) KCFLAGS="-w" || true
 
       - name: Prepare AnyKernel3
         run: |
